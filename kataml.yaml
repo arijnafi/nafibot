@@ -1,0 +1,214 @@
+id: 36ffb8d3-0bd5-4b77-b563-413c709bdbb6
+revision: 47880f408f98b89ad6818080bf19ceedfa582770
+name: kata-Nafi
+tag: latest
+desc: "1. Bot sederhana yang fiturnya setelah greetings, bot akan nanyain name, gender, dan location.\n2. Data yang ditanyain oleh bot di atas, disimpan ke dalam DB. Jadi kalian perlu buat backend pakai NodeJS, nanti deploy ke heroku aja sama push ke github masing - masing."
+flows:
+    fallback:
+        active: true
+        intents:
+            fallbackIntent:
+                type: text
+                initial: false
+                fallback: true
+        states:
+            init:
+                transitions:
+                    init:
+                        fallback: true
+                action: gangerti
+                initial: true
+                end: true
+        actions:
+            fallbackMessage:
+                type: text
+                options:
+                    text: 'ngomong apaan sih'
+            gangerti:
+                type: text
+                options:
+                    text: 'Ngomong apaan sih'
+        methods: {}
+    askData:
+        active: true
+        fallback: true
+        intents:
+            initIntentNL:
+                type: text
+                initial: false
+                fallback: true
+                classifier:
+                    nlu: hiNL
+                    match: hello
+            helloIntent:
+                type: text
+                initial: true
+                fallback: false
+            askNameIntent:
+                type: text
+                initial: false
+                fallback: false
+                priority: 10
+                classifier:
+                    nlu: superModel
+                    match: person
+                    options:
+                        labels: true
+                attributes:
+                    name:
+                        nlu: superModel
+                        path: person
+            askLocIntent:
+                type: text
+                initial: false
+                fallback: false
+                classifier:
+                    nlu: superModel
+                    match: location
+                    options:
+                        labels: true
+                attributes:
+                    location:
+                        nlu: superModel
+                        path: location
+            genderIntent:
+                type: text
+                initial: false
+                fallback: false
+                priority: 8
+                classifier:
+                    -
+                        nlu: genderNL
+                        match: Cowo
+                    -
+                        nlu: genderNL
+                        match: Cewe
+                attributes:
+                    gender:
+                        nlu: genderNL
+            locIntent:
+                type: text
+                initial: false
+                fallback: false
+                priority: 2
+                classifier:
+                    nlu: superModel
+                    match: location
+                    options:
+                        labels: true
+                attributes:
+                    location:
+                        nlu: superModel
+                        path: location
+        states:
+            init:
+                transitions:
+                    AskName:
+                        fallback: false
+                initial: true
+                end: false
+            AskName:
+                transitions:
+                    askGender:
+                        fallback: false
+                        condition: 'intent=="askNameIntent"'
+                        mapping:
+                            data.name: attributes.name
+                action: askName
+                end: false
+            askGender:
+                transitions:
+                    askLocation:
+                        fallback: true
+                        condition: 'intent=="genderIntent"'
+                        mapping:
+                            data.gender: attributes.gender
+                action: askGender
+                end: false
+            askLocation:
+                transitions:
+                    bye:
+                        fallback: true
+                        condition: 'intent=="locIntent"'
+                        mapping:
+                            data.location: attributes.location
+                action: askLocation
+            bye:
+                transitions: {}
+                action:
+                    -
+                        name: bye
+                    -
+                        name: API
+                end: true
+        actions:
+            sayDontUnderstand:
+                type: text
+                options:
+                    text: 'Maaf saya belum mengerti :('
+            askName:
+                type: text
+                options:
+                    text: 'Kamu siapa?'
+            askGender:
+                type: text
+                options:
+                    text: 'Oh, hi $(data.name) ! Btw, kamu cowo apa cewe?'
+            askLocation:
+                type: text
+                options:
+                    text: '$(data.gender) tinggal dimana?'
+            bye:
+                type: text
+                options:
+                    text: '$(data.gender) $(data.location) biasanya cakep sih, nice to meet you $(data.name) :)'
+            API:
+                type: api
+                options:
+                    uri: 'https://kata-nafi-bot.herokuapp.com/notes'
+                    method: POST
+                    body:
+                        name: $(data.name)
+                        gender: $(data.gender)
+                        location: $(data.location)
+        methods: {}
+nlus:
+    hiNL:
+        type: keyword
+        options:
+            keywords:
+                hello:
+                    - hi
+                    - hey
+                    - hai
+    superModel:
+        type: nl
+        options:
+            nluId: 'nafikata:kata-Nafi'
+            threshold: 0.7
+            output: phrase
+            labels: false
+            entity: kata
+    genderNL:
+        type: keyword
+        options:
+            keywords:
+                Cowo:
+                    - cowo
+                    - pria
+                    - 'laki laki'
+                    - l
+                    - male
+                    - man
+                    - laki
+                    - m
+                Cewe:
+                    - cewe
+                    - perempuan
+                    - wanita
+                    - p
+                    - female
+                    - f
+                    - woman
+methods: {}
+config: {}
